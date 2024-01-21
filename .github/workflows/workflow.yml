@@ -1,0 +1,107 @@
+name: Test and Deploy
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+jobs:
+  static-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Black
+        run: |
+          pip install black
+          black --check --diff .
+      - name: Pylint
+        if: false
+        run: |
+          pip install pylint
+          pylint $(git ls-files '*.py')
+  dynamic-test:
+    needs: static-test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.12', '3.7']
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get UMLet
+        shell: bash
+        run: |
+          curl -o umlet.zip https://umlet.com/download/umlet_15_1/umlet-standalone-15.1.zip
+          unzip umlet.zip
+      - name: Install UMLet
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd Umlet
+          $pwd = Get-Location
+          echo "$pwd" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install UMLet
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd Umlet
+          echo "$(pwd)" >> $GITHUB_PATH
+      - name: Check UMLet
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+              umlet="Umlet.exe"
+          else
+              umlet="umlet.sh"
+          fi
+          which $umlet
+          $umlet -action=convert -format=pdf -filename=tests/roots/test-image/SimpleClass.uxf -output=SimpleClass.pdf
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          set -xe
+          python -VV
+          python -m site
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+      - name: Install Package
+        run: |
+          python -m pip install .
+      - name: Run Tests for ${{ matrix.python-version }}
+        run: |
+          python -m pytest -vv
+  pypi-release:
+    needs: dynamic-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/') && github.repository_owner == 'basejumpa'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+      - name: Build PyPI Wheel
+        run: |
+          python setup.py sdist
+          python setup.py bdist_wheel
+      - name: Publish a Python distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_token }}

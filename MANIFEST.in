@@ -1,0 +1,6 @@
+include *.txt
+include LICENSE
+recursive-include sphinxcontrib *.css
+recursive-include tests *.uxf
+recursive-include tests *.py
+recursive-include tests *.rst

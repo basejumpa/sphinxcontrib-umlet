@@ -1,0 +1,1 @@
+.. umlet-image:: SimpleClass.uxf

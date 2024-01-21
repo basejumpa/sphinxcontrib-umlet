@@ -1,0 +1,10 @@
+# Build / Compile Files
+__pycache__/
+build/
+dist/
+sphinxcontrib_umlet.egg-info/
+
+venv/
+
+# Local user config for tests
+tests/local_user_config.json
