@@ -29,7 +29,7 @@ Installation
 2. Add the UMLet binary to `$PATH`. See below for more details and alternative solutions.
 
 3. **pip install sphinxcontrib-umlet**
-4. In your sphinx **config.py**, register it to the extensions to use, such as:
+4. In your sphinx **conf.py**, register it to the extensions to use, such as:
 
 .. code-block:: python
 
